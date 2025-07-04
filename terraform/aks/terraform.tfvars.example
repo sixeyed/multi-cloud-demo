@@ -1,0 +1,33 @@
+# Example configuration for AKS deployment
+# Copy this to terraform.tfvars and customize
+
+# Basic cluster configuration
+resource_group_name = "multi-cloud-demo-aks-rg"
+location           = "eastus"
+cluster_name       = "multi-cloud-demo-aks"
+dns_prefix         = "mcdemo-aks"
+
+# Kubernetes version (check available versions with: az aks get-versions -l eastus)
+kubernetes_version = "1.28.3"
+
+# Node pool configuration
+default_node_count   = 2
+min_node_count      = 2
+max_node_count      = 5
+default_node_vm_size = "Standard_D4s_v3"
+
+# Monitoring
+log_retention_days = 30
+
+# Container Registry
+create_acr = true
+acr_name   = "multiclouddemoacr"  # Must be globally unique
+
+# Resource tags
+tags = {
+  Environment = "Demo"
+  Project     = "MultiCloudDemo"
+  ManagedBy   = "Terraform"
+  Owner       = "YourName"
+  CostCenter  = "Engineering"
+}

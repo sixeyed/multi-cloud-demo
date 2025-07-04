@@ -1,0 +1,31 @@
+# Example configuration for EKS deployment
+# Copy this to terraform.tfvars and customize
+
+# AWS region
+aws_region = "us-east-1"
+
+# Cluster configuration
+cluster_name       = "multi-cloud-demo-eks"
+kubernetes_version = "1.28"
+
+# Node configuration
+node_instance_type = "t3.xlarge"
+min_node_count     = 2
+max_node_count     = 5
+desired_node_count = 3
+
+# Monitoring
+log_retention_days = 30
+
+# Container Registry
+enable_ecr          = true
+ecr_repository_name = "multi-cloud-demo"
+
+# Resource tags
+tags = {
+  Environment = "Demo"
+  Project     = "MultiCloudDemo"
+  ManagedBy   = "Terraform"
+  Owner       = "YourName"
+  CostCenter  = "Engineering"
+}

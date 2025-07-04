@@ -159,3 +159,16 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# StorageClass configuration (disabled by default)
+storageClass:
+  enabled: false
+  name: ""
+  provisioner: ""
+  parameters: {}
+  volumeBindingMode: "WaitForFirstConsumer"
+  allowVolumeExpansion: true
+  reclaimPolicy: "Delete"
+  isDefault: false
+  annotations: {}
+  labels: {}

@@ -1,0 +1,22 @@
+{{- if .Values.storageClass.enabled }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storageClass.name }}
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "{{ .Values.storageClass.isDefault | default false }}"
+    {{- with .Values.storageClass.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  labels:
+    {{- include "multi-cloud-demo.labels" . | nindent 4 }}
+    {{- with .Values.storageClass.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+provisioner: {{ .Values.storageClass.provisioner }}
+parameters:
+  {{- toYaml .Values.storageClass.parameters | nindent 2 }}
+volumeBindingMode: {{ .Values.storageClass.volumeBindingMode | default "WaitForFirstConsumer" }}
+allowVolumeExpansion: {{ .Values.storageClass.allowVolumeExpansion | default true }}
+reclaimPolicy: {{ .Values.storageClass.reclaimPolicy | default "Delete" }}
+{{- end }}

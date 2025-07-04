@@ -1,0 +1,107 @@
+# values-aks.yaml - Azure AKS environment configuration  
+# Usage: helm install demo . -f values-aks.yaml
+
+webapp:
+  replicaCount: 3
+  
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 8080
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-resource-group: "demo-resources"
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: demo-aks.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: demo-aks-tls
+        hosts:
+          - demo-aks.example.com
+
+backgroundworker:
+  replicaCount: 5
+
+sqlserver:
+  enabled: true
+  
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 100Gi
+    storageClass: "premium-lrs-storage-class"
+  
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+
+redis:
+  enabled: true
+  
+  master:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "premium-lrs-storage-class"
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "premium-lrs-storage-class"
+
+# Azure AKS specific settings
+nodeSelector:
+  kubernetes.io/arch: amd64
+
+# Environment-specific settings
+logging:
+  defaultLevel: "Information"
+  applicationLevel: "Information"
+
+# Pod security context for AKS
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 2000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# AKS-specific StorageClass for Premium LRS volumes
+storageClass:
+  enabled: true
+  name: "premium-lrs-storage-class"
+  provisioner: "disk.csi.azure.com"
+  parameters:
+    storageaccounttype: "Premium_LRS"
+    kind: "Managed"
+    fsType: "ext4"
+    cachingmode: "ReadOnly"
+  volumeBindingMode: "WaitForFirstConsumer"
+  allowVolumeExpansion: true
+  reclaimPolicy: "Delete"
+  isDefault: false
+  annotations:
+    storageclass.beta.kubernetes.io/provisioner: "disk.csi.azure.com"
+  labels:
+    environment: "aks"
+    storage-type: "premium-lrs"

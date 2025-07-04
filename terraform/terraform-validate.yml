@@ -1,0 +1,132 @@
+# terraform-validate.yml - GitHub Actions workflow for validating Terraform configurations
+# Save this file as .github/workflows/terraform-validate.yml in your repository
+
+name: Terraform Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+
+jobs:
+  validate:
+    name: Validate Terraform Configurations
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+    
+    - name: Setup TFLint
+      uses: terraform-linters/setup-tflint@v4
+      with:
+        tflint_version: latest
+    
+    - name: Terraform Format Check
+      run: |
+        cd terraform
+        terraform fmt -check -recursive
+        if [ $? -ne 0 ]; then
+          echo "❌ Terraform formatting issues found"
+          echo "Run: terraform fmt -recursive"
+          exit 1
+        fi
+        echo "✅ All files properly formatted"
+    
+    - name: Validate AKS Configuration
+      run: |
+        cd terraform/aks
+        echo "🔍 Validating AKS configuration..."
+        terraform init -backend=false
+        terraform validate
+        if [ $? -eq 0 ]; then
+          echo "✅ AKS configuration is valid"
+        else
+          echo "❌ AKS configuration validation failed"
+          exit 1
+        fi
+    
+    - name: Validate EKS Configuration
+      run: |
+        cd terraform/eks
+        echo "🔍 Validating EKS configuration..."
+        terraform init -backend=false
+        terraform validate
+        if [ $? -eq 0 ]; then
+          echo "✅ EKS configuration is valid"
+        else
+          echo "❌ EKS configuration validation failed"
+          exit 1
+        fi
+    
+    - name: Run TFLint on AKS
+      run: |
+        cd terraform/aks
+        echo "🔍 Running TFLint on AKS..."
+        tflint --init
+        tflint --format=compact
+        if [ $? -eq 0 ]; then
+          echo "✅ TFLint passed for AKS"
+        else
+          echo "⚠️ TFLint found issues in AKS configuration"
+        fi
+    
+    - name: Run TFLint on EKS
+      run: |
+        cd terraform/eks
+        echo "🔍 Running TFLint on EKS..."
+        tflint --init
+        tflint --format=compact
+        if [ $? -eq 0 ]; then
+          echo "✅ TFLint passed for EKS"
+        else
+          echo "⚠️ TFLint found issues in EKS configuration"
+        fi
+    
+    - name: Security Scan with Checkov
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: terraform/
+        framework: terraform
+        output_format: cli
+        soft_fail: true
+        quiet: true
+    
+    - name: Generate Terraform Docs
+      uses: terraform-docs/gh-actions@v1.0.0
+      with:
+        working-dir: terraform/aks
+        output-file: README.md
+        output-method: inject
+        fail-on-diff: false
+    
+    - name: Generate Terraform Docs for EKS
+      uses: terraform-docs/gh-actions@v1.0.0
+      with:
+        working-dir: terraform/eks
+        output-file: README.md
+        output-method: inject
+        fail-on-diff: false
+    
+    - name: Summary
+      run: |
+        echo "## Terraform Validation Summary 📋" >> $GITHUB_STEP_SUMMARY
+        echo "| Configuration | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|---------------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Formatting | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+        echo "| AKS Validation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+        echo "| EKS Validation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+        echo "| TFLint | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+        echo "| Security Scan | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🚀 All Terraform configurations are ready for deployment!" >> $GITHUB_STEP_SUMMARY

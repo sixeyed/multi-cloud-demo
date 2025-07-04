@@ -1,0 +1,118 @@
+USER PROMPTS - Multi-Cloud Kubernetes Demo Development Session
+================================================================
+
+1. "this is a new simple demo app for showing how Kubernetes deployments can work the same way in different clouds. i'd like to create a basic multi service application - a web app which posts text to a redis queue, and a background worker which reads from the queue. both should be .NET, and the web app should have a very simple form for the user to enter text. i'd also like docker files and docker compose.yml so this runs locally for development"
+
+2. "great. now let's have a helm folder with a chart to deploy this app to kubernetes. we'll want the chart to have a redis dependency - probably bitnami's chart"
+
+3. "great. i want to demonstrate different kubernetes features. can we add to the worker process so it writes logs to a file or persists data somewhere so we can see PVCs and different storage options"
+
+4. "no, scratch that. leave the logging to console but also add SQL server container to docker-compose.yml and have the worker write the messages to a database table"
+
+5. "the data isn't getting into sql server from the worker. check the connection string and the ef core code"
+
+6. "that's looking good - i forgot to build again :) what will the behaviour be in kubernetes if the worker starts before the database is ready?"
+
+7. "yes please. add readiness probes to sql and web deployments and init containers to worker so it doesn't try to start until sql is ready"
+
+8. "sql server pod isn't ready: Password did not match that for the login provided"
+
+9. "let's simplify the sql deployment. add a startup probe which does the sqlcmd check and see if that helps. we want exec not httpget"
+
+10. "and the background worker. in the init container just check the dns for sql server"
+
+11. "sql server doesn't tolerate two pods accessing the same data files, can you set the deployment strategy to recreate"
+
+12. "sql server pod is ready now but nslookup isn't finding it from the worker init container"
+
+13. "worker good now. webapp is failing to find redis. let me check the redis service name"
+
+14. "redis connection still fails. i can see the redis service is called demo-redis-master not demo-multi-cloud-demo-redis-master"
+
+15. "we can add the retry flag to the redis connection string"
+
+16. "and while we're at it, let's move the config to json files in configmaps rather than env"
+
+17. "good, but let's put the raw json in files in a config folder and use .Files.Get to read them in the configmap template"
+
+18. "let's add a checksum to the deployments so when the configmaps change the pods rollout"
+
+19. "update the json files so the default log level is warning and the application level uses the values from the helm values"
+
+20. "what are the namespaces for the .net apps?"
+
+21. "the list characters in the web page are displaying weirdly. can you replace • with a normal character"
+
+22. "still getting an image pull - we need to set imagepullpolicy for local deployment. the images exist locally"
+
+23. "not never - IfNotPresent or whatever it is"
+
+24. "worker initcontainer isn't completing - stuck at Waiting for SQL Server to accept connections"
+
+25. "can we add some values files for different environments to helm - local, staging, production"
+
+26. "nice. let's keep the local values simple - lose the security contexts and maybe reduce the resource requirements"
+
+27. "can you write a powershell script to deploy the local helm setup with some nice colored output and checks for prerequisites"
+
+28. "the web pods are failing with imagepullbackoffs again"
+
+29. "yes, and let's have a specific tag :2507"
+
+30. "can you add a switch to the helm script to optionally check for redis chart updates with helm dependency update"
+
+31. "cool. let's have 3 replicas of the worker to prove messages aren't processed in duplicate"
+
+32. "good. let's make the web ui a bit fancier - and with bigger text"
+
+33. "and let's add another switch to the local deployment script to optionally watch the worker logs after deployment"
+
+34. "let's take out the docker build stuff altogether from the powershell script"
+
+35. "that's the old docker-compose command"
+
+36. "this is very cool. let's add another page to the web app which shows the messages in sql server. probably best to split it out so the html isn't all in a string now too :)"
+
+37. "also - why do we have HTML strings at all? shouldn't we be using razor pages or something."
+
+38. "cool. let's check it builds with compose"
+
+39. "issue with the web pods reaching sql server: A network-related or instance-specific error occurred while establishing a connection to SQL Server. also we need to move the ensurecreated into the shared project, so web and worker can both call it whichever gets there first"
+
+40. "excellent. when we rebuild and deploy locally the image tags don't change so the pods don't restart. can you add a restart flag to the script whid restarts the web and worker deployments after the helm upgrade"
+
+41. "let's do the restart if the build flag was passed too"
+
+42. "the restart isn't working - the script isn't using the right deployment object names. let's do it by label instead - find the webapp and worker deployments by the component label, and restart them"
+
+43. "two issues with the web app. we need to disable all the antiforgery token stuff because this is just a basic demo. worse though it's still failing to connect to the database The server was not found or was not accessible."
+
+44. "very nice. let's have you taking the credit - change the footnote to be "Written by Claude Code. Powered by...""
+
+45. "in index.cshtml let's tighten up the list of info items. lose the last one and change "3 background workers" to just "Background workers""
+
+46. "thanks. why does the sql server pod keep restarting? is the liveness probe triggering that?"
+
+47. "seems unlikely that sql server takes more than 5s to respond to a tcp check..."
+
+48. "we're at a good point. let's initialise a git repo in this folder, add a gitignore to exclude the usual .net artifacts, add everything and do an initial commit"
+
+49. "great. can you generate a CLAUDE.md file with everything you've learned, and can you dump all of my prompts to a text file?"
+
+50. "ok. now it gets interesting. the other environments for helm aren't staging and production, they're different kubernetes services - eks and aks. can you create new values files for those and they need different storageclass settings. aks will use premium-lrs but we probably want to set the storageclass name. eks will need a gp3 storageclass"
+
+51. "we need a template for the storage class. aks has defaults but they vary over time so we want to be specific with our premium lrs. eks doesn't have defaults so we need to specify the gp3"
+
+52. "now we need a terraform folder with two sets of deployments: one creates a basic AKS cluster and the other an EKS cluster. both should create all associated resources and set up integrated logging and monitoring for the kubernetes workloads. we'll deploy these manually so we'll want steps scripted in powershell with clear documentation"
+
+53. "can you add in the readme installation instructions for the pre-reqs. i don't have terraform installed on this machine - which is a mac - other developers use windows"
+
+54. "try running validate-all - there are errors in the tf config"
+
+55. "can you save all the prompts for this session to the user-prompts file"
+
+================================================================
+Total prompts: 55
+Session focused on: Multi-cloud Kubernetes demo application development + Terraform infrastructure
+Technologies: .NET 9, ASP.NET Core, Razor Pages, Redis, SQL Server, Docker, Kubernetes, Helm, Terraform, Azure AKS, AWS EKS
+Key achievements: Complete working application with shared library architecture, modern UI, automated deployment, production-ready Kubernetes manifests, and comprehensive Terraform infrastructure with validation
