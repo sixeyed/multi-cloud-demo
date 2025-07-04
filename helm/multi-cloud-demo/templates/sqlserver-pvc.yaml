@@ -1,0 +1,18 @@
+{{- if and .Values.sqlserver.enabled .Values.sqlserver.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "multi-cloud-demo.fullname" . }}-sqlserver-pvc
+  labels:
+    {{- include "multi-cloud-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sqlserver
+spec:
+  accessModes:
+    - {{ .Values.sqlserver.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.sqlserver.persistence.size }}
+  {{- if .Values.sqlserver.persistence.storageClass }}
+  storageClassName: {{ .Values.sqlserver.persistence.storageClass }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,67 @@
+# values-local.yaml - Docker Desktop Kubernetes environment
+# Usage: helm install demo . -f values-local.yaml
+
+webapp:
+  replicaCount: 2
+  
+  image:
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 8080
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+backgroundworker:
+  replicaCount: 3
+  
+  image:
+    pullPolicy: IfNotPresent
+  
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
+
+sqlserver:
+  enabled: true
+  
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    storageClass: "hostpath"
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+redis:
+  enabled: true
+  
+  master:
+    persistence:
+      enabled: false
+  replica:
+    replicaCount: 1
+    persistence:
+      enabled: false
+
+logging:
+  defaultLevel: "Information"
+  applicationLevel: "Debug"

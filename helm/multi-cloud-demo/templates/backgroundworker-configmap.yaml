@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "multi-cloud-demo.fullname" . }}-backgroundworker-config
+  labels:
+    {{- include "multi-cloud-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backgroundworker
+data:
+  appsettings.json: |
+{{ tpl (.Files.Get "config/backgroundworker-appsettings.json") . | indent 4 }}

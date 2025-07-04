@@ -1,0 +1,15 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "{{ .Values.logging.defaultLevel | default "Warning" }}",
+      "Microsoft.Hosting.Lifetime": "Information",
+      "BackgroundWorker": "{{ .Values.logging.applicationLevel | default "Information" }}"
+    }
+  },
+  "ConnectionStrings": {
+    "Redis": "{{ .Release.Name }}-redis-master:6379,connectRetry=5,connectTimeout=10000,abortConnect=false"
+    {{- if .Values.sqlserver.enabled }},
+    "SqlServer": "Server={{ include "multi-cloud-demo.fullname" . }}-sqlserver,1433;Database=MultiCloudDemo;User Id=sa;Password={{ .Values.sqlserver.auth.saPassword }};TrustServerCertificate=true;"
+    {{- end }}
+  }
+}

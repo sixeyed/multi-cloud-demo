@@ -1,0 +1,43 @@
+@page
+@model MessagesModel
+@{
+    ViewData["Title"] = "Messages";
+    Layout = "_Layout";
+}
+
+<div class="messages-section">
+    <h2>Recent Messages (Last 100)</h2>
+    
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="no-messages" style="background: #fee; color: #c53030; border-left: 6px solid #f56565;">
+            ⚠️ @Model.ErrorMessage
+        </div>
+    }
+    else if (Model.Messages.Count > 0)
+    {
+        <table class="messages-table">
+            <thead>
+                <tr>
+                    <th>Message</th>
+                    <th>Processed At</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var message in Model.Messages)
+                {
+                    <tr>
+                        <td class="message-content">@message.Content</td>
+                        <td class="message-time">@message.ProcessedAt.ToString("yyyy-MM-dd HH:mm:ss") UTC</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="no-messages">
+            No messages found. Send a message from the home page to get started!
+        </div>
+    }
+</div>

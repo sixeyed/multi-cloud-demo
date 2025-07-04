@@ -1,0 +1,19 @@
+{{- if .Values.sqlserver.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "multi-cloud-demo.fullname" . }}-sqlserver
+  labels:
+    {{- include "multi-cloud-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sqlserver
+spec:
+  type: {{ .Values.sqlserver.service.type }}
+  ports:
+    - port: {{ .Values.sqlserver.service.port }}
+      targetPort: sqlserver
+      protocol: TCP
+      name: sqlserver
+  selector:
+    {{- include "multi-cloud-demo.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: sqlserver
+{{- end }}

@@ -1,0 +1,103 @@
+{{- if .Values.sqlserver.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "multi-cloud-demo.fullname" . }}-sqlserver
+  labels:
+    {{- include "multi-cloud-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sqlserver
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "multi-cloud-demo.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: sqlserver
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "multi-cloud-demo.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: sqlserver
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "multi-cloud-demo.serviceAccountName" . }}
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 0
+        fsGroup: 10001
+      containers:
+        - name: sqlserver
+          image: "{{ .Values.sqlserver.image.repository }}:{{ .Values.sqlserver.image.tag }}"
+          imagePullPolicy: {{ .Values.sqlserver.image.pullPolicy }}
+          ports:
+            - name: sqlserver
+              containerPort: 1433
+              protocol: TCP
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "multi-cloud-demo.fullname" . }}-sqlserver
+                  key: sa-password
+            - name: MSSQL_PID
+              value: "Express"
+          volumeMounts:
+            - name: sqlserver-data
+              mountPath: /var/opt/mssql
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -Q "SELECT 1" -C'
+            initialDelaySeconds: {{ .Values.sqlserver.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.sqlserver.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.sqlserver.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.sqlserver.startupProbe.failureThreshold }}
+          readinessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: {{ .Values.sqlserver.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.sqlserver.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.sqlserver.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.sqlserver.readinessProbe.failureThreshold }}
+          livenessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: {{ .Values.sqlserver.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.sqlserver.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.sqlserver.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.sqlserver.livenessProbe.failureThreshold }}
+          resources:
+            {{- toYaml .Values.sqlserver.resources | nindent 12 }}
+      volumes:
+        - name: sqlserver-data
+          {{- if .Values.sqlserver.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "multi-cloud-demo.fullname" . }}-sqlserver-pvc
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

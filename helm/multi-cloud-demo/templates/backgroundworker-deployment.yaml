@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "multi-cloud-demo.fullname" . }}-backgroundworker
+  labels:
+    {{- include "multi-cloud-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backgroundworker
+spec:
+  replicas: {{ .Values.backgroundworker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "multi-cloud-demo.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backgroundworker
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/backgroundworker-configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "multi-cloud-demo.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backgroundworker
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "multi-cloud-demo.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.sqlserver.enabled }}
+      initContainers:
+        - name: wait-for-sqlserver-dns
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for SQL Server DNS to be available..."
+              echo "Looking for service: {{ include "multi-cloud-demo.fullname" . }}-sqlserver"
+              echo "In namespace: {{ .Release.Namespace }}"
+              echo "Checking basic DNS first..."
+              nslookup kubernetes.default.svc.cluster.local || echo "Cluster DNS not working"
+              echo "Now checking for SQL Server service..."
+              COUNTER=0
+              until nslookup {{ include "multi-cloud-demo.fullname" . }}-sqlserver.{{ .Release.Namespace }}.svc.cluster.local; do
+                COUNTER=$((COUNTER+1))
+                echo "Attempt $COUNTER: DNS not resolved yet, waiting..."
+                if [ $COUNTER -gt 30 ]; then
+                  echo "Timeout after 30 attempts. Checking if service exists..."
+                  echo "Trying short name: {{ include "multi-cloud-demo.fullname" . }}-sqlserver"
+                  nslookup {{ include "multi-cloud-demo.fullname" . }}-sqlserver || echo "Short name failed too"
+                  exit 1
+                fi
+                sleep 2
+              done
+              echo "SQL Server DNS resolved! Service is available."
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.backgroundworker.name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.global.imageRegistry }}{{ .Values.backgroundworker.image.repository }}:{{ .Values.backgroundworker.image.tag }}"
+          imagePullPolicy: {{ .Values.backgroundworker.image.pullPolicy }}
+          env:
+            {{- toYaml .Values.backgroundworker.env | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/appsettings.json
+              subPath: appsettings.json
+              readOnly: true
+          resources:
+            {{- toYaml .Values.backgroundworker.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "multi-cloud-demo.fullname" . }}-backgroundworker-config
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

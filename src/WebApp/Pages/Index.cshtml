@@ -1,0 +1,27 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+    Layout = "_Layout";
+}
+
+<div class="info">
+    <h2>Test the Message Processing System</h2>
+    <ul>
+        <li>Messages are queued in Redis for reliable delivery</li>
+        <li>Background workers compete to process each message</li>
+        <li>Each message is processed exactly once (no duplicates)</li>
+        <li>Messages are stored in SQL Server database</li>
+    </ul>
+</div>
+
+<div class="form-section">
+    <h2>Send a Message</h2>
+    <form method="post">
+        <div class="form-group">
+            <label for="message">Enter your message:</label>
+            <input type="text" id="message" name="message" value="@Model.RandomMessage" required>
+        </div>
+        <input type="submit" value="Send Message">
+    </form>
+</div>

@@ -1,0 +1,71 @@
+# values-staging.yaml - Staging environment configuration
+# Usage: helm install demo . -f values-staging.yaml
+
+webapp:
+  replicaCount: 2
+  
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /
+    hosts:
+      - host: staging-demo.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: staging-demo-tls
+        hosts:
+          - staging-demo.example.com
+
+backgroundworker:
+  replicaCount: 2
+
+sqlserver:
+  enabled: true
+  
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 20Gi
+    storageClass: "standard"
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+redis:
+  enabled: true
+  
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+  replica:
+    replicaCount: 1
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# Environment-specific settings
+webapp:
+  env:
+    - name: ASPNETCORE_ENVIRONMENT
+      value: "Staging"
+    - name: ASPNETCORE_URLS
+      value: "http://+:8080"
+
+backgroundworker:
+  env:
+    - name: DOTNET_ENVIRONMENT
+      value: "Staging"
