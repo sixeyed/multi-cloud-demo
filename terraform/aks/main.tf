@@ -7,7 +7,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.85.0"
+      version = "~> 3.116.0"
     }
     azuread = {
       source  = "hashicorp/azuread"
@@ -17,6 +17,7 @@ terraform {
 }
 
 provider "azurerm" {
+  skip_provider_registration = true
   features {
     resource_group {
       prevent_deletion_if_contains_resources = false
@@ -52,7 +53,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   kubernetes_version  = var.kubernetes_version
 
   # Enable automatic channel upgrade
-  automatic_channel_upgrade = "stable"
+  automatic_channel_upgrade = "patch"
 
   # Default node pool
   default_node_pool {
@@ -66,8 +67,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
     min_count           = var.min_node_count
     max_count           = var.max_node_count
 
-    # Enable host encryption
-    enable_host_encryption = true
+    # Enable host encryption (commented out as it may require preview APIs)
+    # enable_host_encryption = true
 
     # Node labels
     node_labels = {
@@ -88,6 +89,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
     network_policy    = "azure"
     load_balancer_sku = "standard"
     outbound_type     = "loadBalancer"
+    service_cidr      = "10.1.0.0/16"
+    dns_service_ip    = "10.1.0.10"
   }
 
   # Add-ons
@@ -97,28 +100,59 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   azure_policy_enabled = true
 
-  # Enable Microsoft Defender
-  microsoft_defender {
-    log_analytics_workspace_id = azurerm_log_analytics_workspace.aks.id
-  }
+  # Enable Microsoft Defender (commented out as it may use preview APIs)
+  # microsoft_defender {
+  #   log_analytics_workspace_id = azurerm_log_analytics_workspace.aks.id
+  # }
 
-  # Auto scaler profile
-  auto_scaler_profile {
-    balance_similar_node_groups      = true
-    expander                         = "random"
-    max_graceful_termination_sec     = 600
-    max_node_provisioning_time       = "15m"
-    max_unready_nodes                = 3
-    new_pod_scale_up_delay           = "0s"
-    scale_down_delay_after_add       = "10m"
-    scale_down_delay_after_delete    = "10s"
-    scale_down_delay_after_failure   = "3m"
-    scan_interval                    = "10s"
-    scale_down_unneeded              = "10m"
-    scale_down_unready               = "20m"
-    scale_down_utilization_threshold = 0.5
-  }
+  # Auto scaler profile (simplified to avoid preview API issues)
+  # auto_scaler_profile {
+  #   balance_similar_node_groups      = true
+  #   expander                         = "random"
+  #   max_graceful_termination_sec     = 600
+  #   max_node_provisioning_time       = "15m"
+  #   max_unready_nodes                = 3
+  #   new_pod_scale_up_delay           = "0s"
+  #   scale_down_delay_after_add       = "10m"
+  #   scale_down_delay_after_delete    = "10s"
+  #   scale_down_delay_after_failure   = "3m"
+  #   scan_interval                    = "10s"
+  #   scale_down_unneeded              = "10m"
+  #   scale_down_unready               = "20m"
+  #   scale_down_utilization_threshold = 0.5
+  # }
 
+  tags = var.tags
+}
+
+# ARM64 Node Pool (optional, for Apple Silicon builds)
+resource "azurerm_kubernetes_cluster_node_pool" "arm64" {
+  count                 = var.enable_arm64_nodes ? 1 : 0
+  name                  = "arm64pool"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
+  vm_size               = var.arm64_node_vm_size
+  node_count            = var.arm64_node_count
+  
+  # Auto-scaling
+  enable_auto_scaling = true
+  min_count          = var.arm64_min_node_count
+  max_count          = var.arm64_max_node_count
+  
+  # Node configuration
+  os_disk_size_gb    = 100
+  os_disk_type       = "Managed"
+  vnet_subnet_id     = azurerm_subnet.aks.id
+  
+  # Node labels for ARM64
+  node_labels = {
+    "nodepool" = "arm64"
+  }
+  
+  # Node taints to ensure only ARM64 workloads are scheduled
+  node_taints = [
+    "nodepool=arm64:NoSchedule"
+  ]
+  
   tags = var.tags
 }
 

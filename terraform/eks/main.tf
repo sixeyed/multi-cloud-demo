@@ -105,30 +105,65 @@ module "eks" {
   }
 
   # Node groups
-  eks_managed_node_groups = {
-    default = {
-      name            = "default-ng"
-      use_name_prefix = true
+  eks_managed_node_groups = merge(
+    {
+      default = {
+        name            = "default-ng"
+        use_name_prefix = true
 
-      instance_types = [var.node_instance_type]
+        instance_types = [var.node_instance_type]
 
-      min_size     = var.min_node_count
-      max_size     = var.max_node_count
-      desired_size = var.desired_node_count
+        min_size     = var.min_node_count
+        max_size     = var.max_node_count
+        desired_size = var.desired_node_count
 
-      disk_size = 100
-      disk_type = "gp3"
+        disk_size = 100
+        disk_type = "gp3"
 
-      enable_monitoring = true
+        enable_monitoring = true
 
-      labels = {
-        Environment = "demo"
-        NodeGroup   = "default"
+        labels = {
+          Environment = "demo"
+          NodeGroup   = "default"
+        }
+
+        tags = var.tags
       }
+    },
+    var.enable_arm64_nodes ? {
+      arm64 = {
+        name            = "arm64-ng"
+        use_name_prefix = true
 
-      tags = var.tags
-    }
-  }
+        instance_types = [var.arm64_instance_type]
+        ami_type      = "AL2_ARM_64"
+
+        min_size     = var.arm64_min_node_count
+        max_size     = var.arm64_max_node_count
+        desired_size = var.arm64_desired_node_count
+
+        disk_size = 100
+        disk_type = "gp3"
+
+        enable_monitoring = true
+
+        labels = {
+          Environment = "demo"
+          NodeGroup   = "arm64"
+        }
+
+        taints = [
+          {
+            key    = "nodepool"
+            value  = "arm64"
+            effect = "NO_SCHEDULE"
+          }
+        ]
+
+        tags = var.tags
+      }
+    } : {}
+  )
 
   tags = var.tags
 }

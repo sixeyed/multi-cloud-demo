@@ -12,6 +12,74 @@ This application showcases a microservices architecture with:
 - **Redis**: Message queue for reliable delivery
 - **SQL Server**: Persistent storage for processed messages
 
+## Container Image Configuration
+
+This project supports flexible container registry and repository configuration for different deployment scenarios.
+
+### Docker Compose
+
+Configure images using environment variables in `.env` file:
+
+```bash
+# Copy the example and customize
+cp .env.example .env
+
+# Edit .env with your registry settings
+REGISTRY=docker.io
+REPOSITORY=sixeyed
+TAG=2507
+```
+
+**Examples:**
+- **Docker Hub**: `REGISTRY=docker.io` `REPOSITORY=your-username`
+- **Azure ACR**: `REGISTRY=myregistry.azurecr.io` `REPOSITORY=myproject` 
+- **Google GCR**: `REGISTRY=gcr.io` `REPOSITORY=my-gcp-project`
+- **Amazon ECR**: `REGISTRY=123456789012.dkr.ecr.us-east-1.amazonaws.com` `REPOSITORY=my-repo`
+- **Local development**: `REGISTRY=` `REPOSITORY=multi-cloud-demo`
+
+### Helm Charts
+
+Images are configured in the default `values.yaml` file:
+
+```yaml
+# Global image configuration
+image:
+  registry: "docker.io"    # Container registry
+  repository: "sixeyed"    # Repository/namespace
+  tag: "2507"              # Image tag
+  pullPolicy: IfNotPresent
+
+# Component image names
+webapp:
+  image:
+    name: "multi-cloud-demo-webapp"
+
+backgroundworker:
+  image:
+    name: "multi-cloud-demo-backgroundworker"
+```
+
+**Resulting image names:**
+- **Default**: `docker.io/sixeyed/multi-cloud-demo-webapp:2507`
+
+**Override at deployment time:**
+```bash
+# Use your own Docker Hub repository
+helm install demo . -f values-local.yaml --set image.repository=myuser --set image.tag=latest
+# Results in: docker.io/myuser/multi-cloud-demo-webapp:latest
+
+# Use local development images (no registry)
+helm install demo . -f values-local.yaml --set image.registry="" --set image.repository="multi-cloud-demo"
+# Results in: multi-cloud-demo/multi-cloud-demo-webapp:2507
+
+# Use a different registry entirely
+helm install demo . --set image.registry=myregistry.azurecr.io --set image.repository=myproject
+# Results in: myregistry.azurecr.io/myproject/multi-cloud-demo-webapp:2507
+
+# Override component names if needed
+helm install demo . --set webapp.image.name=my-webapp --set backgroundworker.image.name=my-worker
+```
+
 ## Multi-Cloud Deployment
 
 ### Local Development (Docker Desktop)

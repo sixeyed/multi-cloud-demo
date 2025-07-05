@@ -19,6 +19,7 @@ output "kube_config_raw" {
 output "kube_config_host" {
   description = "Kubernetes API server endpoint"
   value       = azurerm_kubernetes_cluster.aks.kube_config[0].host
+  sensitive   = true
 }
 
 output "acr_login_server" {
@@ -29,6 +30,7 @@ output "acr_login_server" {
 output "log_analytics_workspace_id" {
   description = "Log Analytics Workspace ID"
   value       = azurerm_log_analytics_workspace.aks.id
+  sensitive   = true
 }
 
 output "application_insights_instrumentation_key" {
@@ -45,5 +47,5 @@ output "application_insights_connection_string" {
 
 output "get_credentials_command" {
   description = "Command to get AKS credentials"
-  value       = "az aks get-credentials --resource-group ${azurerm_resource_group.aks.name} --name ${azurerm_kubernetes_cluster.aks.name}"
+  value       = "az aks get-credentials --resource-group ${azurerm_resource_group.aks.name} --name ${azurerm_kubernetes_cluster.aks.name} --overwrite-existing"
 }

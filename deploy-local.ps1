@@ -115,12 +115,30 @@ if ($UpdateDependencies) {
     Push-Location "helm/multi-cloud-demo"
 }
 
+# Detect CPU architecture from Docker
+Write-Info "Detecting CPU architecture..."
+$dockerArch = "amd64"  # default
+try {
+    $dockerInfo = docker system info --format "{{.Architecture}}" 2>$null
+    if ($dockerInfo -eq "aarch64" -or $dockerInfo -like "*arm64*") {
+        $dockerArch = "arm64"
+        Write-Info "Detected ARM64 architecture (Apple Silicon)"
+    } else {
+        Write-Info "Detected AMD64 architecture"
+    }
+} catch {
+    Write-Warning "Could not detect Docker architecture, defaulting to AMD64"
+}
+
 # Deploy with Helm
-Write-Info "Deploying with Helm..."
+Write-Info "Deploying with Helm (targeting $dockerArch nodes)..."
 $helmArgs = @(
     "upgrade", "--install", $ReleaseName, ".",
     "--namespace", $Namespace,
     "--values", "values-local.yaml",
+    "--set", "image.registry=",
+    "--set", "image.repository=multi-cloud-demo",
+    "--set", "architecture.nodeArch=$dockerArch",
     "--timeout", "10m"
 )
 

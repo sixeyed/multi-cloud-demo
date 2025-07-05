@@ -179,6 +179,20 @@ az account set --subscription "Your Subscription Name"
 
 # Verify login
 az account show
+
+# Register required Azure resource providers
+az provider register --namespace Microsoft.ContainerService
+az provider register --namespace Microsoft.OperationsManagement
+az provider register --namespace Microsoft.OperationalInsights
+az provider register --namespace Microsoft.Insights
+az provider register --namespace Microsoft.Storage
+az provider register --namespace Microsoft.Network
+az provider register --namespace Microsoft.ContainerRegistry
+az provider register --namespace Microsoft.Authorization
+
+# Verify provider registration (may take a few minutes)
+az provider show --namespace Microsoft.ContainerService --query registrationState
+az provider show --namespace Microsoft.OperationsManagement --query registrationState
 ```
 
 #### AWS Authentication

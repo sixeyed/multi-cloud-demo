@@ -60,6 +60,36 @@ variable "ecr_repository_name" {
   default     = "multi-cloud-demo"
 }
 
+variable "enable_arm64_nodes" {
+  description = "Enable ARM64 node group for Apple Silicon builds"
+  type        = bool
+  default     = true
+}
+
+variable "arm64_instance_type" {
+  description = "EC2 instance type for ARM64 nodes"
+  type        = string
+  default     = "m6g.medium"  # ARM-based Graviton2
+}
+
+variable "arm64_desired_node_count" {
+  description = "Desired number of ARM64 nodes"
+  type        = number
+  default     = 1
+}
+
+variable "arm64_min_node_count" {
+  description = "Minimum number of ARM64 nodes"
+  type        = number
+  default     = 0
+}
+
+variable "arm64_max_node_count" {
+  description = "Maximum number of ARM64 nodes"
+  type        = number
+  default     = 3
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)

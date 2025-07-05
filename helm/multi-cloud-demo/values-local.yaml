@@ -4,9 +4,6 @@
 webapp:
   replicaCount: 2
   
-  image:
-    pullPolicy: IfNotPresent
-  
   service:
     type: LoadBalancer
     port: 80
@@ -22,9 +19,6 @@ webapp:
 
 backgroundworker:
   replicaCount: 3
-  
-  image:
-    pullPolicy: IfNotPresent
   
   resources:
     limits:

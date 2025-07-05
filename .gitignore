@@ -24,6 +24,9 @@ packages/
 # Docker
 .dockerignore
 
+# Environment variables (contains registry credentials)
+.env
+
 # IDE and editor files
 *.swp
 *.swo
@@ -73,3 +76,12 @@ helm/*/Chart.lock
 # Temporary files
 *.tmp
 *.temp
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+tfplan
+*.tfplan

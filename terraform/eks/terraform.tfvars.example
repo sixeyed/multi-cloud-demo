@@ -21,6 +21,13 @@ log_retention_days = 30
 enable_ecr          = true
 ecr_repository_name = "multi-cloud-demo"
 
+# ARM64 support (for Apple Silicon)
+enable_arm64_nodes      = true
+arm64_instance_type     = "m6g.medium"
+arm64_desired_node_count = 1
+arm64_min_node_count    = 0
+arm64_max_node_count    = 3
+
 # Resource tags
 tags = {
   Environment = "Demo"

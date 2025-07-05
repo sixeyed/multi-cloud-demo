@@ -110,30 +110,27 @@ cluster_name = "$ClusterName"
         exit $LASTEXITCODE
     }
 
-    # Plan if requested
+    # Always create a plan first
+    Write-Info "`nCreating Terraform plan..."
+    terraform plan -out=tfplan
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Terraform plan failed"
+        exit 1
+    }
+    
+    Write-Success "`n✓ Terraform plan created successfully"
+    
+    # Plan only if requested
     if ($Plan) {
-        Write-Info "`nCreating Terraform plan..."
-        terraform plan -out=tfplan
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Terraform plan failed"
-            exit 1
-        }
-        
-        Write-Success "`n✓ Terraform plan created successfully"
         Write-Info "Review the plan above and run without -Plan flag to apply"
         exit 0
     }
 
-    # Apply Terraform
-    Write-Info "`nApplying Terraform configuration..."
+    # Apply from plan
+    Write-Info "`nApplying Terraform plan..."
     Write-Warning "This will create an EKS cluster and associated resources. This process takes 15-20 minutes."
-    
-    if ($AutoApprove) {
-        terraform apply -auto-approve
-    } else {
-        terraform apply
-    }
+    terraform apply tfplan
     
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Terraform apply failed"

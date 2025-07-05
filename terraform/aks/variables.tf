@@ -9,7 +9,7 @@ variable "resource_group_name" {
 variable "location" {
   description = "Azure region for resources"
   type        = string
-  default     = "eastus"
+  default     = "westeurope"
 }
 
 variable "cluster_name" {
@@ -27,7 +27,7 @@ variable "dns_prefix" {
 variable "kubernetes_version" {
   description = "Kubernetes version"
   type        = string
-  default     = "1.28.3"
+  default     = "1.32.4"
 }
 
 variable "default_node_count" {
@@ -70,6 +70,36 @@ variable "acr_name" {
   description = "Name of the Azure Container Registry"
   type        = string
   default     = "multiclouddemoacr"
+}
+
+variable "enable_arm64_nodes" {
+  description = "Enable ARM64 node pool for Apple Silicon builds"
+  type        = bool
+  default     = true
+}
+
+variable "arm64_node_count" {
+  description = "Initial number of ARM64 nodes"
+  type        = number
+  default     = 1
+}
+
+variable "arm64_min_node_count" {
+  description = "Minimum number of ARM64 nodes for autoscaling"
+  type        = number
+  default     = 0
+}
+
+variable "arm64_max_node_count" {
+  description = "Maximum number of ARM64 nodes for autoscaling"
+  type        = number
+  default     = 3
+}
+
+variable "arm64_node_vm_size" {
+  description = "VM size for ARM64 node pool"
+  type        = string
+  default     = "Standard_D2ps_v5"  # ARM64-based VM
 }
 
 variable "tags" {

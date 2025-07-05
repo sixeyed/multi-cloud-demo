@@ -65,8 +65,7 @@ redis:
       storageClass: "gp3-storage-class"
 
 # AWS EKS specific settings
-nodeSelector:
-  kubernetes.io/arch: amd64
+# nodeSelector removed - architecture is auto-detected by deployment scripts
 
 # Environment-specific settings
 logging:

@@ -1,12 +1,13 @@
 # deploy-aks.ps1 - Deploy Multi-Cloud Demo to Azure AKS
-# Usage: .\deploy-aks.ps1 [-Namespace] [-ReleaseName] [-Wait] [-WatchLogs] [-UpdateDependencies]
+# Usage: .\deploy-aks.ps1 [-Namespace] [-ReleaseName] [-Wait] [-WatchLogs] [-UpdateDependencies] [-Restart]
 
 param(
     [string]$Namespace = "messaging-demo",
     [string]$ReleaseName = "demo",
     [switch]$Wait,
     [switch]$WatchLogs,
-    [switch]$UpdateDependencies
+    [switch]$UpdateDependencies,
+    [switch]$Restart
 )
 
 # Color output functions
@@ -87,12 +88,36 @@ if ($UpdateDependencies) {
     Push-Location "helm/multi-cloud-demo"
 }
 
+# Detect CPU architecture from Docker
+Write-Info "Detecting CPU architecture..."
+$dockerArch = "amd64"  # default
+try {
+    $dockerInfo = docker system info --format "{{.Architecture}}" 2>$null
+    if ($dockerInfo -eq "aarch64" -or $dockerInfo -like "*arm64*") {
+        $dockerArch = "arm64"
+        Write-Info "Detected ARM64 architecture (Apple Silicon)"
+    } else {
+        Write-Info "Detected AMD64 architecture"
+    }
+} catch {
+    Write-Warning "Could not detect Docker architecture, defaulting to AMD64"
+}
+
+# Info about ARM64 deployment
+if ($dockerArch -eq "arm64") {
+    Write-Info "ARM64 architecture detected - will deploy to ARM64 nodes (Apple Silicon compatible)"
+    Write-Info "If deployment fails with 'exec format error', ARM64 nodes may not be available."
+    Write-Info "To ensure ARM64 nodes are enabled:"
+    Write-Host "  terraform apply -var='enable_arm64_nodes=true'" -ForegroundColor Gray
+}
+
 # Deploy with Helm
-Write-Info "Deploying to AKS with Helm..."
+Write-Info "Deploying to AKS with Helm (targeting $dockerArch nodes)..."
 $helmArgs = @(
     "upgrade", "--install", $ReleaseName, ".",
     "--namespace", $Namespace,
     "--values", "values-aks.yaml",
+    "--set", "architecture.nodeArch=$dockerArch",
     "--timeout", "15m"
 )
 
@@ -110,6 +135,47 @@ if ($LASTEXITCODE -ne 0) {
 Pop-Location
 
 Write-Success "✓ AKS deployment completed successfully!"
+
+# Restart deployments if requested (forces pods to restart with new images)
+if ($Restart) {
+    Write-Info "Restarting deployments to pick up new images..."
+    
+    # Find and restart webapp deployment
+    $webappDeployment = kubectl get deployments -n $Namespace -l "app.kubernetes.io/component=webapp" -o name 2>$null
+    if ($webappDeployment) {
+        kubectl rollout restart $webappDeployment -n $Namespace
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "✓ WebApp deployment restarted"
+        } else {
+            Write-Warning "⚠ Failed to restart WebApp deployment"
+        }
+    } else {
+        Write-Warning "⚠ WebApp deployment not found"
+    }
+    
+    # Find and restart backgroundworker deployment
+    $workerDeployment = kubectl get deployments -n $Namespace -l "app.kubernetes.io/component=backgroundworker" -o name 2>$null
+    if ($workerDeployment) {
+        kubectl rollout restart $workerDeployment -n $Namespace
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "✓ BackgroundWorker deployment restarted"
+        } else {
+            Write-Warning "⚠ Failed to restart BackgroundWorker deployment"
+        }
+    } else {
+        Write-Warning "⚠ BackgroundWorker deployment not found"
+    }
+    
+    # Wait for rollouts to complete
+    Write-Info "Waiting for rollouts to complete..."
+    if ($webappDeployment) {
+        kubectl rollout status $webappDeployment -n $Namespace --timeout=300s
+    }
+    if ($workerDeployment) {
+        kubectl rollout status $workerDeployment -n $Namespace --timeout=300s
+    }
+    Write-Success "✓ All deployments restarted successfully"
+}
 
 # Show deployment status
 Write-Info "Checking deployment status..."
@@ -144,6 +210,8 @@ Write-Host "  kubectl get storageclass" -ForegroundColor Gray
 Write-Host "  kubectl get pvc -n $Namespace" -ForegroundColor Gray
 Write-Host "  az aks show --resource-group myRG --name myCluster" -ForegroundColor Gray
 Write-Host "  helm uninstall $ReleaseName -n $Namespace" -ForegroundColor Gray
+Write-Host "  .\deploy-aks.ps1 -UpdateDependencies  # Check for Redis chart updates" -ForegroundColor Gray
+Write-Host "  .\deploy-aks.ps1 -Restart             # Force restart deployments with new images" -ForegroundColor Gray
 
 # Watch logs if requested
 if ($WatchLogs) {

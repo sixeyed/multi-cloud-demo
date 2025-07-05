@@ -63,8 +63,8 @@ spec:
         - name: {{ .Values.backgroundworker.name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.global.imageRegistry }}{{ .Values.backgroundworker.image.repository }}:{{ .Values.backgroundworker.image.tag }}"
-          imagePullPolicy: {{ .Values.backgroundworker.image.pullPolicy }}
+          image: "{{- if .Values.image.registry }}{{ .Values.image.registry }}/{{- end }}{{ .Values.image.repository }}/{{ .Values.backgroundworker.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             {{- toYaml .Values.backgroundworker.env | nindent 12 }}
           volumeMounts:
@@ -78,15 +78,31 @@ spec:
         - name: config
           configMap:
             name: {{ include "multi-cloud-demo.fullname" . }}-backgroundworker-config
-      {{- with .Values.nodeSelector }}
       nodeSelector:
+        {{- if eq .Values.architecture.nodeArch "arm64" }}
+        nodepool: arm64
+        {{- else }}
+        nodepool: default
+        {{- end }}
+        {{- with .Values.nodeSelector }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- if eq .Values.architecture.nodeArch "arm64" }}
+      tolerations:
+        - key: "nodepool"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        {{- with .Values.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- else }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- end }}
       {{- with .Values.affinity }}
       affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

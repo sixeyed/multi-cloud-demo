@@ -8,8 +8,9 @@ param(
     [switch]$Plan,
     [switch]$Destroy,
     [switch]$AutoApprove,
+    [switch]$Import,
     [string]$ResourceGroupName = "multi-cloud-demo-aks-rg",
-    [string]$Location = "eastus",
+    [string]$Location = "westeurope",
     [string]$ClusterName = "multi-cloud-demo-aks"
 )
 
@@ -74,7 +75,7 @@ Push-Location $aksPath
 try {
     # Initialize Terraform
     Write-Info "`nInitializing Terraform..."
-    terraform init
+    terraform init -upgrade
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Terraform init failed"
         exit 1
@@ -111,33 +112,128 @@ cluster_name       = "$ClusterName"
         exit $LASTEXITCODE
     }
 
-    # Plan if requested
-    if ($Plan) {
-        Write-Info "`nCreating Terraform plan..."
-        terraform plan -out=tfplan
+    # Import existing resources if requested
+    if ($Import) {
+        Write-Info "`nImporting existing Azure resources..."
         
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Terraform plan failed"
-            exit 1
+        try {
+            # Import resource group
+            $rgExists = az group exists --name $ResourceGroupName
+            if ($rgExists -eq "true") {
+                $rgId = az group show --name $ResourceGroupName --query id --output tsv
+                Write-Info "Importing resource group: $ResourceGroupName"
+                terraform import azurerm_resource_group.aks $rgId
+            }
+            
+            # Import other resources if they exist
+            $subscriptionId = az account show --query id --output tsv
+            
+            # Try importing common resources (ignore errors if they don't exist)
+            $imports = @(
+                @{ resource = "azurerm_log_analytics_workspace.aks"; id = "/subscriptions/$subscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.OperationalInsights/workspaces/$ClusterName-logs" },
+                @{ resource = "azurerm_container_registry.acr[0]"; id = "/subscriptions/$subscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.ContainerRegistry/registries/multiclouddemoacr" },
+                @{ resource = "azurerm_virtual_network.aks"; id = "/subscriptions/$subscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Network/virtualNetworks/$ClusterName-vnet" },
+                @{ resource = "azurerm_storage_account.diagnostics"; id = "/subscriptions/$subscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Storage/storageAccounts/multiclouddemoaksdiag" },
+                @{ resource = "azurerm_application_insights.aks"; id = "/subscriptions/$subscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Insights/components/$ClusterName-insights" }
+            )
+            
+            foreach ($import in $imports) {
+                Write-Info "Attempting to import $($import.resource)..."
+                terraform import $import.resource $import.id 2>$null
+            }
+            
+            Write-Success "✓ Import completed (some resources may not have existed)"
+        } catch {
+            Write-Warning "Some imports may have failed - this is normal if resources don't exist yet"
         }
-        
-        Write-Success "`n✓ Terraform plan created successfully"
+    }
+
+    # Always create a plan first
+    Write-Info "`nCreating Terraform plan..."
+    terraform plan -out=tfplan
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Terraform plan failed"
+        exit 1
+    }
+    
+    Write-Success "`n✓ Terraform plan created successfully"
+    
+    # Plan only if requested
+    if ($Plan) {
         Write-Info "Review the plan above and run without -Plan flag to apply"
         exit 0
     }
 
-    # Apply Terraform
-    Write-Info "`nApplying Terraform configuration..."
-    
-    if ($AutoApprove) {
-        terraform apply -auto-approve
-    } else {
-        terraform apply
-    }
+    # Apply from plan
+    Write-Info "`nApplying Terraform plan..."
+    terraform apply tfplan
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Terraform apply failed"
-        exit 1
+        Write-Warning "Terraform apply failed. Checking for import requirements..."
+        
+        # Check if this is an import issue
+        $importNeeded = $false
+        $resourceGroupName = (Get-Content terraform.tfvars | Where-Object { $_ -match 'resource_group_name' } | ForEach-Object { ($_ -split '=')[1].Trim().Trim('"') })
+        if (-not $resourceGroupName) { $resourceGroupName = "multi-cloud-demo-aks-rg" }
+        
+        # Check if resource group exists but not in state
+        try {
+            $rgExists = az group exists --name $resourceGroupName
+            if ($rgExists -eq "true") {
+                $stateCheck = terraform state list | Where-Object { $_ -match "azurerm_resource_group" }
+                if (-not $stateCheck) {
+                    Write-Info "Resource group exists but not in Terraform state. Attempting import..."
+                    $rgId = az group show --name $resourceGroupName --query id --output tsv
+                    terraform import azurerm_resource_group.aks $rgId
+                    $importNeeded = $true
+                }
+            }
+        } catch {
+            Write-Warning "Could not check resource group status"
+        }
+        
+        # Check for other common resources that might need importing
+        $commonResources = @(
+            @{ name = "azurerm_log_analytics_workspace.aks"; pattern = "multi-cloud-demo-aks-logs" },
+            @{ name = "azurerm_container_registry.acr[0]"; pattern = "multiclouddemoacr" },
+            @{ name = "azurerm_virtual_network.aks"; pattern = "multi-cloud-demo-aks-vnet" },
+            @{ name = "azurerm_storage_account.diagnostics"; pattern = "multiclouddemoaksdiag" }
+        )
+        
+        foreach ($resource in $commonResources) {
+            try {
+                $stateCheck = terraform state list | Where-Object { $_ -eq $resource.name }
+                if (-not $stateCheck) {
+                    Write-Info "Checking if $($resource.pattern) exists and needs importing..."
+                    # For simplicity, we'll regenerate the plan and let user handle specific imports
+                    # Full automation would require more complex Azure resource queries
+                }
+            } catch {
+                # Ignore errors in resource checking
+            }
+        }
+        
+        if ($importNeeded) {
+            Write-Info "Resources imported. Regenerating plan..."
+            terraform plan -out=tfplan
+            if ($LASTEXITCODE -eq 0) {
+                Write-Info "Retrying apply with updated state..."
+                terraform apply tfplan
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Success "✓ Apply succeeded after import"
+                } else {
+                    Write-Error "Apply failed even after import. Manual intervention required."
+                    Write-Info "Try running: terraform import <resource_type>.<resource_name> <azure_resource_id>"
+                    exit 1
+                }
+            }
+        } else {
+            Write-Error "Terraform apply failed. Manual intervention required."
+            Write-Info "Check the error above and consider importing existing resources:"
+            Write-Info "terraform import azurerm_resource_group.aks /subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP_NAME"
+            exit 1
+        }
     }
     
     Write-Success "`n✓ AKS infrastructure deployed successfully!"

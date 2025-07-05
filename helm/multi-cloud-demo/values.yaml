@@ -1,13 +1,24 @@
 global:
-  imageRegistry: ""
+  imageRegistry: "docker.io"
   imagePullSecrets: []
+
+# Image configuration
+image:
+  registry: "docker.io"
+  repository: "sixeyed"
+  tag: "2507"
+  pullPolicy: IfNotPresent
+
+# Architecture configuration
+architecture:
+  # Target CPU architecture: amd64 or arm64
+  # Auto-detected by deployment scripts based on local Docker platform
+  nodeArch: "amd64"
 
 webapp:
   name: webapp
   image:
-    repository: multi-cloud-demo/webapp
-    tag: "2507"
-    pullPolicy: IfNotPresent
+    name: "multi-cloud-demo-webapp"
   
   replicaCount: 1
   
@@ -50,9 +61,7 @@ webapp:
 backgroundworker:
   name: backgroundworker
   image:
-    repository: multi-cloud-demo/backgroundworker
-    tag: "2507"
-    pullPolicy: IfNotPresent
+    name: "multi-cloud-demo-backgroundworker"
   
   replicaCount: 1
   

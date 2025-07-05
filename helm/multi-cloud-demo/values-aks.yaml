@@ -63,8 +63,7 @@ redis:
       storageClass: "premium-lrs-storage-class"
 
 # Azure AKS specific settings
-nodeSelector:
-  kubernetes.io/arch: amd64
+# nodeSelector removed - architecture is auto-detected by deployment scripts
 
 # Environment-specific settings
 logging:

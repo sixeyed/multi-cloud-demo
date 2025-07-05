@@ -3,7 +3,7 @@ services:
     build: 
       context: ./src
       dockerfile: WebApp/Dockerfile
-    image: multi-cloud-demo/webapp:2507
+    image: ${REGISTRY:-docker.io}/${REPOSITORY:-sixeyed}/multi-cloud-demo-webapp:${TAG:-2507}
     ports:
       - "8080:8080"
     environment:
@@ -23,7 +23,7 @@ services:
     build:
       context: ./src
       dockerfile: BackgroundWorker/Dockerfile
-    image: multi-cloud-demo/backgroundworker:2507
+    image: ${REGISTRY:-docker.io}/${REPOSITORY:-sixeyed}/multi-cloud-demo-backgroundworker:${TAG:-2507}
     environment:
       - DOTNET_ENVIRONMENT=Development
       - ConnectionStrings__Redis=redis:6379
