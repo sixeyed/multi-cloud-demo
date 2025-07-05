@@ -2,7 +2,7 @@
 # Prerequisites: AWS CLI installed
 
 param(
-    [string]$Region = "us-east-1",
+    [string]$Region = "eu-west-2",
     [string]$Profile = "default",
     [switch]$ConfigureCredentials,
     [switch]$Verify,
@@ -41,11 +41,20 @@ try {
 # Check current AWS configuration
 Write-Info "`nChecking AWS authentication..."
 try {
-    $identity = aws sts get-caller-identity --output json | ConvertFrom-Json
+    $awsArgs = @()
+    if ($Profile -ne "default") {
+        $awsArgs += @("--profile", $Profile)
+    }
+    $identity = aws sts get-caller-identity @awsArgs --output json | ConvertFrom-Json
     Write-Success "✓ Already authenticated to AWS"
     Write-Info "  Account: $($identity.Account)"
     Write-Info "  User/Role: $($identity.Arn)"
-    Write-Info "  Region: $(aws configure get region)"
+    if ($Profile -ne "default") {
+        Write-Info "  Profile: $Profile"
+        Write-Info "  Region: $(aws configure get region --profile $Profile)"
+    } else {
+        Write-Info "  Region: $(aws configure get region)"
+    }
 } catch {
     Write-Warning "⚠ AWS credentials not configured or invalid"
     $ConfigureCredentials = $true
@@ -140,12 +149,21 @@ if ($Verify -or -not $PSBoundParameters.ContainsKey('Verify')) {
     
     # Test basic AWS CLI functionality
     try {
-        $identity = aws sts get-caller-identity --output json | ConvertFrom-Json
+        $awsArgs = @()
+        if ($Profile -ne "default") {
+            $awsArgs += @("--profile", $Profile)
+        }
+        $identity = aws sts get-caller-identity @awsArgs --output json | ConvertFrom-Json
         Write-Success "✓ AWS CLI authentication working"
         Write-Info "  Account: $($identity.Account)"
         Write-Info "  User/Role: $($identity.Arn.Split('/')[-1])"
         
-        $currentRegion = aws configure get region
+        if ($Profile -ne "default") {
+            $currentRegion = aws configure get region --profile $Profile
+            Write-Info "  Profile: $Profile"
+        } else {
+            $currentRegion = aws configure get region
+        }
         if (-not $currentRegion) { $currentRegion = "us-east-1" }
         Write-Info "  Region: $currentRegion"
         
@@ -153,7 +171,7 @@ if ($Verify -or -not $PSBoundParameters.ContainsKey('Verify')) {
         Write-Info "Testing basic AWS permissions..."
         
         # Test EC2 describe (minimal permission)
-        aws ec2 describe-regions --region $currentRegion --output table 2>$null | Out-Null
+        aws ec2 describe-regions @awsArgs --region $currentRegion --output table 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Success "✓ Basic AWS permissions verified"
         } else {
@@ -161,7 +179,7 @@ if ($Verify -or -not $PSBoundParameters.ContainsKey('Verify')) {
         }
         
         # Test EKS permissions
-        aws eks list-clusters --region $currentRegion --output json 2>$null | Out-Null
+        aws eks list-clusters @awsArgs --region $currentRegion --output json 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Success "✓ EKS permissions verified"
         } else {
@@ -185,7 +203,7 @@ if ($Verify -or -not $PSBoundParameters.ContainsKey('Verify')) {
     
     foreach ($check in $requiredServices) {
         try {
-            aws $check.service $check.action --region $currentRegion --output json 2>$null | Out-Null
+            aws $check.service $check.action @awsArgs --region $currentRegion --output json 2>$null | Out-Null
             if ($LASTEXITCODE -eq 0) {
                 Write-Success "✓ $($check.service.ToUpper()): Access verified"
             } else {
@@ -246,7 +264,11 @@ Write-Success "`n🎉 AWS setup complete!"
 Write-Info "`nNext Steps:"
 Write-Host "1. Deploy EKS infrastructure:" -ForegroundColor Gray
 Write-Host "   cd ../../terraform" -ForegroundColor Gray
-Write-Host "   pwsh ./deploy-eks-infra.ps1 -Plan" -ForegroundColor Gray
+if ($Profile -ne "default") {
+    Write-Host "   pwsh ./deploy-eks-infra.ps1 -Plan -Profile $Profile" -ForegroundColor Gray
+} else {
+    Write-Host "   pwsh ./deploy-eks-infra.ps1 -Plan" -ForegroundColor Gray
+}
 Write-Host ""
 Write-Host "2. Or set up Azure for multi-cloud deployment:" -ForegroundColor Gray
 Write-Host "   pwsh ./setup-azure.ps1" -ForegroundColor Gray

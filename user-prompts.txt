@@ -1,6 +1,7 @@
 USER PROMPTS - Multi-Cloud Kubernetes Demo Development Session
 ================================================================
 
+PREVIOUS SESSION (Initial Development):
 1. "this is a new simple demo app for showing how Kubernetes deployments can work the same way in different clouds. i'd like to create a basic multi service application - a web app which posts text to a redis queue, and a background worker which reads from the queue. both should be .NET, and the web app should have a very simple form for the user to enter text. i'd also like docker files and docker compose.yml so this runs locally for development"
 
 2. "great. now let's have a helm folder with a chart to deploy this app to kubernetes. we'll want the chart to have a redis dependency - probably bitnami's chart"
@@ -111,8 +112,54 @@ USER PROMPTS - Multi-Cloud Kubernetes Demo Development Session
 
 55. "can you save all the prompts for this session to the user-prompts file"
 
+CURRENT SESSION (AWS Profile Support & EKS Authentication):
+56. "thanks. is the ekds setup all correct for arm nodes with scale to zero and the custom label?"
+
+57. "Error: expected effect to be one of ["NO_SCHEDULE" "NO_EXECUTE" "PREFER_NO_SCHEDULE"], got NoSchedule"
+
+58. "Error: creating CloudWatch Logs Log Group (/aws/eks/multi-cloud-demo-eks/cluster): operation error CloudWatch Logs: CreateLogGroup, https response error StatusCode: 400, RequestID: fca9d788-1a3d-4e01-adfa-753dd4f5f6e0, ResourceAlreadyExistsException: The specified log group already exists"
+
+59. "the eks tf config is out of sync with azure - ths k8s version hasn't been updated"
+
+60. "Error: Kubernetes cluster unreachable: the server has asked for the client to provide credentials"
+
+61. "no, the cluster exists. this is at the end of the apply phase, cluster is healthy"
+
+62. "Error: Kubernetes cluster unreachable: Get "https://7D34B6E0B93904E83EB06F6FE2FED7E5.gr7.eu-west-2.eks.amazonaws.com/version": getting credentials: exec: executable aws failed with exit code 255"
+
+63. "helm_release.aws_load_balancer_controller: Creating...
+╷
+│ Error: Kubernetes cluster unreachable: the server has asked for the client to provide credentials"
+
+64. "that works, but it won't do a major version upgrade from 1.28 - rror: updating EKS Cluster (multi-cloud-demo-eks) version: operation error EKS: UpdateClusterVersion, https response error StatusCode: 400, RequestID: 96fdcc4f-e78e-4402-be9d-7ace319d0a02, InvalidParameterException: Unsupported Kubernetes minor version update from 1.28 to 1.32"
+
+65. "Error: Kubernetes cluster unreachable: the server has asked for the client to provide credentials"
+
+66. "it's an issue authenticating kubectl to the eks cluster. couldn't get current server API group list: the server has asked for the client to provide credentials"
+error: You must be logged in to the server (the server has asked for the client to provide credentials)"
+
+67. "no, now we're back to the authentication error. looks like we're not setting the profile in the update-kubeconfig commands"
+
+68. "Error: Kubernetes cluster unreachable: Get "https://7D34B6E0B93904E83EB06F6FE2FED7E5.gr7.eu-west-2.eks.amazonaws.com/version": getting credentials: exec: executable aws failed with exit code 255"
+
+69. "that;s working now. can you reinstate the loadbalancer etc  - i want the deploy script to create everything we need to run the app"
+
+70. "Configuring kubectl...
+
+Unknown options: --overwrite"
+
+71. "does that update-kubeconfig have the profile flag? surely they all need it - or you just set the env var at the start of the script and reset it at the enf in a finally"
+
+72. "Attempting to connect to EKS cluster...
+E0705 14:25:16.669626   61988 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: the server has asked for the client to provide credentials""
+
+73. "Testing EKS token generation... worked ok but then connecting to eks cluster failed. the profile and region are set correctly in the env vars. the output of tf has update_kubeconfig_command = "aws eks update-kubeconfig --region eu-west-2 --name multi-cloud-demo-eks" - does that run in the same processso it will pick up the profile?"
+
+74. "the kubeconfig settings have this interactiveMode: IfAvailable - is it trying to do something interactive in the script?"
+
+75. "can you dump all the prompts for the session to user-prompts.txt"
+
 ================================================================
-Total prompts: 55
-Session focused on: Multi-cloud Kubernetes demo application development + Terraform infrastructure
-Technologies: .NET 9, ASP.NET Core, Razor Pages, Redis, SQL Server, Docker, Kubernetes, Helm, Terraform, Azure AKS, AWS EKS
-Key achievements: Complete working application with shared library architecture, modern UI, automated deployment, production-ready Kubernetes manifests, and comprehensive Terraform infrastructure with validation
+Total prompts: 75 (55 previous + 20 current)
+Current session focused on: AWS profile support and EKS authentication issues
+Key issues resolved: ARM64 node configuration, Kubernetes version alignment, CloudWatch log group conflicts, AWS profile authentication throughout EKS deployment, kubeconfig interactive mode issues

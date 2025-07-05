@@ -78,6 +78,9 @@ module "eks" {
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
 
+  # EKS Access Entries (replaces aws-auth ConfigMap in newer versions)
+  enable_cluster_creator_admin_permissions = true
+
   # Encryption
   cluster_encryption_config = {
     provider_key_arn = aws_kms_key.eks.arn
@@ -125,6 +128,7 @@ module "eks" {
         labels = {
           Environment = "demo"
           NodeGroup   = "default"
+          nodepool    = "default"
         }
 
         tags = var.tags
@@ -150,6 +154,7 @@ module "eks" {
         labels = {
           Environment = "demo"
           NodeGroup   = "arm64"
+          nodepool    = "arm64"
         }
 
         taints = [
@@ -206,6 +211,10 @@ resource "aws_cloudwatch_log_group" "eks" {
   name              = "/aws/eks/${var.cluster_name}/cluster"
   retention_in_days = var.log_retention_days
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
   tags = var.tags
 }
 
@@ -254,7 +263,12 @@ provider "kubernetes" {
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    args = compact([
+      "eks", "get-token", "--cluster-name", module.eks.cluster_name,
+      "--region", var.aws_region,
+      var.aws_profile != "" ? "--profile" : "",
+      var.aws_profile != "" ? var.aws_profile : ""
+    ])
   }
 }
 
@@ -266,7 +280,12 @@ provider "helm" {
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+      args = compact([
+        "eks", "get-token", "--cluster-name", module.eks.cluster_name,
+        "--region", var.aws_region,
+        var.aws_profile != "" ? "--profile" : "",
+        var.aws_profile != "" ? var.aws_profile : ""
+      ])
     }
   }
 }
@@ -291,6 +310,7 @@ module "aws_load_balancer_controller" {
 }
 
 resource "helm_release" "aws_load_balancer_controller" {
+  count      = var.deploy_addons ? 1 : 0
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
@@ -351,8 +371,13 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
   role       = aws_iam_role.cloudwatch_agent.name
 }
 
+# AWS Auth ConfigMap - created automatically by EKS module for managed node groups
+# The terraform-aws-modules/eks module should create this automatically
+# If it's missing, it might be a version issue or the module expects manual creation
+
 # Deploy CloudWatch agent
 resource "kubernetes_namespace" "cloudwatch" {
+  count = var.deploy_addons ? 1 : 0
   metadata {
     name = "amazon-cloudwatch"
   }
@@ -361,9 +386,10 @@ resource "kubernetes_namespace" "cloudwatch" {
 }
 
 resource "kubernetes_service_account" "cloudwatch_agent" {
+  count = var.deploy_addons ? 1 : 0
   metadata {
     name      = "cloudwatch-agent"
-    namespace = kubernetes_namespace.cloudwatch.metadata[0].name
+    namespace = kubernetes_namespace.cloudwatch[0].metadata[0].name
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.cloudwatch_agent.arn
     }

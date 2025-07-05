@@ -3,7 +3,19 @@
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "us-east-1"
+  default     = "eu-west-2"
+}
+
+variable "aws_profile" {
+  description = "AWS CLI profile name"
+  type        = string
+  default     = ""
+}
+
+variable "deploy_addons" {
+  description = "Deploy Kubernetes addons (requires kubectl to be configured)"
+  type        = bool
+  default     = false
 }
 
 variable "cluster_name" {
@@ -15,7 +27,7 @@ variable "cluster_name" {
 variable "kubernetes_version" {
   description = "Kubernetes version"
   type        = string
-  default     = "1.28"
+  default     = "1.29"
 }
 
 variable "node_instance_type" {
@@ -75,7 +87,7 @@ variable "arm64_instance_type" {
 variable "arm64_desired_node_count" {
   description = "Desired number of ARM64 nodes"
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "arm64_min_node_count" {

@@ -13,7 +13,7 @@ webapp:
       service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
   
   ingress:
-    enabled: true
+    enabled: false  # Using LoadBalancer service instead
     className: "alb"
     annotations:
       kubernetes.io/ingress.class: alb

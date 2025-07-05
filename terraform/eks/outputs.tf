@@ -56,3 +56,9 @@ output "update_kubeconfig_command" {
   description = "Command to update kubeconfig"
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"
 }
+
+output "eks_managed_node_groups" {
+  description = "EKS managed node groups"
+  value       = module.eks.eks_managed_node_groups
+  sensitive   = true
+}
