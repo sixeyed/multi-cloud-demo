@@ -185,12 +185,98 @@ helm/multi-cloud-demo/
 - **TrustServerCertificate**: Required for containerized SQL Server
 - **Non-root Containers**: Security contexts for production
 
+## Multi-Cloud Deployment Features
+
+### Cloud-Specific Storage Classes
+- **Amazon EKS**: GP3 StorageClass with 3000 IOPS, 125 MB/s throughput, encryption enabled
+- **Azure AKS**: Premium LRS StorageClass with ReadOnly caching, managed disks
+- **Local Development**: HostPath volumes for simplicity
+
+### Load Balancer Configuration
+- **EKS**: Network Load Balancer (NLB) with annotations:
+  - `service.beta.kubernetes.io/aws-load-balancer-type: "nlb"`
+  - `service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"`
+- **AKS**: Azure Load Balancer with service annotations
+- **Local**: Docker Desktop built-in LoadBalancer
+
+### Terraform Infrastructure
+- **Modular Design**: Separate modules for AKS and EKS
+- **Complete Stack**: VPC/VNet, subnets, security groups, IAM/managed identity
+- **Monitoring Integration**: CloudWatch/Azure Monitor, Container Insights
+- **ARM64 Support**: Both clouds support ARM64 node pools with scale-to-zero
+- **Two-Phase Deployment**: Infrastructure first, then Kubernetes addons
+
+### AWS EKS Specifics
+- **EKS Access Entries**: Modern authentication using EKS API (replaces aws-auth ConfigMap)
+- **AWS Load Balancer Controller**: Deployed via Helm for NLB/ALB support
+- **Node Groups**: Managed node groups with custom labels (nodepool=default/arm64)
+- **Profile Support**: Scripts handle named AWS CLI profiles
+- **Incremental Upgrades**: Kubernetes versions must be upgraded incrementally
+
+### Azure AKS Specifics
+- **Managed Identity**: System-assigned identity for cluster operations
+- **Auto-scaling**: Enabled with min/max node counts
+- **Node Labels**: Custom labels for architecture-specific deployments
+- **Import Detection**: Scripts detect and import existing resources
+
+### Architecture Detection
+- **Docker Info**: Scripts detect ARM64/AMD64 from Docker build architecture
+- **Node Selection**: Automatic nodeSelector based on detected architecture
+- **Tolerations**: ARM64 nodes have NoSchedule taints, pods add tolerations
+- **Cost Optimization**: ARM64 nodes scale to zero when unused
+
+## Recent Enhancements
+
+### AWS Profile and Authentication
+- Environment variable management (AWS_PROFILE, AWS_REGION)
+- Profile parameter support in all scripts
+- Proper cleanup in finally blocks
+- kubectl authentication with profile support
+
+### Service Annotations
+- Helm templates now properly include service annotations from values
+- LoadBalancer type configuration per environment
+- Ingress disabled to avoid dual load balancer creation
+
+### Debugging Features
+- Comprehensive LoadBalancer debugging in deploy scripts
+- Service endpoint checking
+- Pod selector verification
+- AWS Load Balancer Controller log inspection
+
+## Setup Scripts
+- **Cross-Platform Tool Installation**: Detects OS and installs appropriate versions
+- **Cloud Authentication**: Guided setup for AWS and Azure credentials
+- **Validation Scripts**: Terraform validation for both clouds
+
+## Lessons Learned - Multi-Cloud
+
+### Terraform Module Versions
+- AWS EKS module v20+ uses Access Entries instead of aws-auth ConfigMap
+- Different providers have different parameter names (e.g., NO_SCHEDULE vs NoSchedule)
+- Some features require specific provider versions
+
+### Authentication Patterns
+- AWS: Profile support essential for multi-account scenarios
+- Azure: Service principal or interactive login
+- kubectl: Must be configured after cluster creation
+
+### Load Balancer Differences
+- EKS: Requires AWS Load Balancer Controller for advanced features
+- AKS: Built-in controller with Azure-specific annotations
+- Service annotations must be properly templated in Helm
+
+### Node Pool Management
+- Custom labels avoid conflicts with system labels
+- Architecture-specific pools require careful taint/toleration setup
+- Scale-to-zero requires cluster autoscaler compatibility
+
 ## Future Enhancements
-- **Observability**: Add logging, metrics, tracing
-- **CI/CD**: GitHub Actions or Azure DevOps pipelines
-- **Multi-cloud**: AWS, Azure, GCP deployment examples
-- **Service Mesh**: Istio integration
-- **Monitoring**: Prometheus, Grafana dashboards
+- **CI/CD**: GitHub Actions with multi-cloud deployments
+- **Service Mesh**: Istio/Linkerd for advanced traffic management
+- **Monitoring**: Prometheus stack with cloud-specific exporters
+- **GitOps**: ArgoCD or Flux for declarative deployments
+- **Cost Optimization**: Spot/Preemptible instance support
 
 ## File Structure
 ```

@@ -1,6 +1,14 @@
 # Multi-Cloud Kubernetes Demo
 
-A comprehensive demonstration of deploying the same application consistently across different Kubernetes environments - local Docker Desktop, Amazon EKS, and Azure AKS.
+A demonstration of deploying the same application across different Kubernetes environments - local Docker Desktop, Amazon EKS, and Azure AKS. The application showcases how Kubernetes enables true multi-cloud portability while leveraging cloud-specific features.
+
+## Screenshots
+
+### Azure AKS Deployment
+![AKS Deployment](docs/img/aks-deployment.png)
+
+### Amazon EKS Deployment  
+![EKS Deployment](docs/img/eks-deployment.png)
 
 ## Architecture
 
@@ -130,22 +138,43 @@ StorageClasses are automatically created by the Helm chart based on the target e
 - **Caching**: ReadOnly mode
 - **Volume Binding**: WaitForFirstConsumer
 
-## Prerequisites
+## Quick Start
 
-### All Environments
-- kubectl configured for target cluster
-- Helm 3.x installed
-- Docker (for local development)
+### Prerequisites
+- Docker Desktop (for local development)
+- PowerShell 7+ (cross-platform)
+- Helm 3.x
+- kubectl
 
-### EKS Specific
-- AWS CLI configured with appropriate permissions
-- EKS cluster with EBS CSI driver enabled
-- kubectl configured: `aws eks update-kubeconfig --region <region> --name <cluster>`
+### Deploy Locally
+```bash
+# Build and deploy to Docker Desktop
+./deploy-local.ps1 -Build -Wait
+```
 
-### AKS Specific  
-- Azure CLI configured with appropriate permissions
-- AKS cluster with managed identity
-- kubectl configured: `az aks get-credentials --resource-group <rg> --name <cluster>`
+### Deploy to Cloud
+
+#### Azure AKS
+```bash
+# Create AKS infrastructure
+cd terraform
+./deploy-aks-infra.ps1
+
+# Deploy application
+cd ..
+./deploy-aks.ps1 -Wait
+```
+
+#### Amazon EKS  
+```bash
+# Create EKS infrastructure
+cd terraform
+./deploy-eks-infra.ps1
+
+# Deploy application
+cd ..
+./deploy-eks.ps1 -Wait
+```
 
 ## Configuration Differences
 
@@ -158,36 +187,27 @@ StorageClasses are automatically created by the Helm chart based on the target e
 | **Web App Replicas** | 2 replicas | 3 replicas | 3 replicas |
 | **Redis Persistence** | Disabled | 20GB gp3 | 20GB premium-lrs |
 
-## Deployment Scripts
+## Terraform Infrastructure
 
-### Local Development
-```powershell
-# Build and deploy locally
-.\deploy-local.ps1 -Build
+The `terraform/` directory contains infrastructure as code for both cloud providers:
 
-# Just restart deployments  
-.\deploy-local.ps1 -Restart
-
-# Full deployment with logs
-.\deploy-local.ps1 -Build -UpdateDependencies -WatchLogs
+### Install Prerequisites
+```bash
+# Install all required tools (Terraform, AWS CLI, Azure CLI)
+cd setup/tools
+./install-all.ps1  # Detects OS and installs appropriate versions
 ```
 
-### Amazon EKS
-```powershell
-# First-time deployment (creates StorageClass)
-.\deploy-eks.ps1 -CreateStorageClass -Wait -WatchLogs
-
-# Regular deployment
-.\deploy-eks.ps1 -UpdateDependencies
+### AWS Setup
+```bash
+cd setup/cloud
+./setup-aws.ps1  # Configure AWS credentials
 ```
 
-### Azure AKS
-```powershell
-# First-time deployment (creates StorageClass)
-.\deploy-aks.ps1 -CreateStorageClass -Wait -WatchLogs
-
-# Regular deployment  
-.\deploy-aks.ps1 -UpdateDependencies
+### Azure Setup  
+```bash
+cd setup/cloud
+./setup-azure.ps1  # Login to Azure
 ```
 
 ## Monitoring and Troubleshooting

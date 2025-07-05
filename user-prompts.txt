@@ -159,7 +159,47 @@ E0705 14:25:16.669626   61988 memcache.go:265] "Unhandled Error" err="couldn't g
 
 75. "can you dump all the prompts for the session to user-prompts.txt"
 
+76. "i can't see an aws-auth configmap in the cluster. are we definitely creating that with terraform"
+
+77. "An argument named "manage_aws_auth_configmap" is not expected here."
+
+78. "Configuring kubectl...
+
+Unknown options: --overwrite"
+
+79. "still no auth configmap in the cluster"
+
+80. "but... you won't be able to connect to the cluster to create the confgimap at that point will you?"
+
+81. "Error: creating EKS Access Entry (multi-cloud-demo-eks:arn:aws:iam::674172270910:user/cli-user): operation error EKS: CreateAccessEntry, https response error StatusCode: 409, RequestID: 599521b6-8838-49e3-b339-450e747a9159, ResourceInUseException: The specified access entry resource is already in use on this cluster."
+
+82. "cluster is good and deployment looks good! but the svc has an external address of k8s-messagin-demomult-852ea15830-c290983a95f40933.elb.eu-west-2.amazonaws.com which isn't routing to the pods"
+
+83. "can't you debug this for me?"
+
+84. "the external dns name is returning cluseter ips: 10.0.3.185, 10.0.2.216, 10.0.1.77."
+
+85. "looks like the lb is running. do we need these svc annotations    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"  # Network Load Balancer
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing""
+
+86. "the svc doesn't have those annotations, i'm using the deploy-eks.ps1 script, can you check the values are correclty mapped"
+
+87. "hmm. now when i deploy i get two load balancers - one network and one application. can you check the helm chart doesn't have any redundant config"
+
+88. "that's it! EKS is working too. let's commit and push"
+
+89. "great. can you see the screenshot imagess saved on my desktop"
+
+90. "can you copy them into this repo under docs/img and rename them as eks and aks deployments. then update the readme to show the images, make sure the instructions are up to date and as simple as possible. then update CLAUDE.md with what you've learned and dump the session prompts"
+
 ================================================================
-Total prompts: 75 (55 previous + 20 current)
-Current session focused on: AWS profile support and EKS authentication issues
-Key issues resolved: ARM64 node configuration, Kubernetes version alignment, CloudWatch log group conflicts, AWS profile authentication throughout EKS deployment, kubeconfig interactive mode issues
+Total prompts: 90 (55 initial + 35 current)
+Current session focused on: AWS profile support, EKS authentication, and final documentation
+Key achievements: 
+- Fixed EKS authentication with modern Access Entries (no aws-auth ConfigMap needed)
+- Added AWS profile support throughout all scripts
+- Fixed LoadBalancer annotations in Helm templates
+- Resolved dual load balancer issue (disabled Ingress)
+- Added comprehensive debugging features
+- Successfully deployed to both AKS and EKS
+- Added screenshots and updated all documentation
